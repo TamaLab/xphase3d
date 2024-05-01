@@ -1,0 +1,3 @@
+#!/bin/bash
+
+pjsub --bulk --sparam "0-1" fugaku_demo_py_bulk.job
