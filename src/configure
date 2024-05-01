@@ -1,0 +1,67 @@
+#!/bin/bash
+
+set -e
+
+dir_bin="../bin/"
+
+echo -e -n "\nPlease enter the installation directory of fftw (e.g. /home/xxx/fftw): "
+read dir_fftw
+if [[ $dir_fftw != */ ]]; then
+    dir_fftw="$dir_fftw/"
+fi
+flags_fftw="-I ${dir_fftw}include -L ${dir_fftw}lib -lfftw3_mpi -lfftw3 -lm"
+
+echo -e -n "\nPlease enter the installation directory of hdf5 (e.g. /home/xxx/hdf5): "
+read dir_hdf5
+if [[ $dir_hdf5 != */ ]]; then
+    dir_hdf5="$dir_hdf5/"
+fi
+flags_hdf5="-I ${dir_hdf5}include"
+
+echo -e -n "\nPlease enter the COMPILER FLAGS (excluding -Wl if any) indicated by h5cc -show: "
+read flags_h5cc
+
+flags="-Wall -Wextra ${flags_fftw} ${flags_hdf5} ${flags_h5cc}"
+
+touch make
+printf "#!/bin/bash\n\n" > make
+printf "set -e\n\n" >> make
+
+printf "mkdir ${dir_bin}\n\n" >> make
+
+printf "echo Compiling align\n" >> make
+printf "mpicc fileio.c align.c $flags -o ${dir_bin}align\n\n" >> make
+
+printf "echo Compiling bin_b\n" >> make
+printf "mpicc fileio.c bin_b.c $flags -o ${dir_bin}bin_b\n\n" >> make
+
+printf "echo Compiling bin_f\n" >> make
+printf "mpicc fileio.c bin_f.c $flags -o ${dir_bin}bin_f\n\n" >> make
+
+printf "echo Compiling fsc\n" >> make
+printf "mpicc fileio.c fsc.c $flags -o ${dir_bin}fsc\n\n" >> make
+
+printf "echo Compiling make_m\n" >> make
+printf "mpicc fileio.c make_m.c $flags -o ${dir_bin}make_m\n\n" >> make
+
+printf "echo Compiling make_r0\n" >> make
+printf "mpicc fileio.c make_r0.c $flags -o ${dir_bin}make_r0\n\n" >> make
+
+printf "echo Compiling make_s\n" >> make
+printf "mpicc fileio.c optimize.c make_s.c $flags -o ${dir_bin}make_s\n\n" >> make
+
+printf "echo Compiling merge\n" >> make
+printf "mpicc fileio.c merge.c $flags -o ${dir_bin}merge\n\n" >> make
+
+printf "echo Compiling prtf\n" >> make
+printf "mpicc fileio.c prtf.c $flags -o ${dir_bin}prtf\n\n" >> make
+
+printf "echo Compiling run\n" >> make
+printf "mpicc fileio.c optimize.c run.c $flags -o ${dir_bin}run\n\n" >> make
+
+printf "echo\n" >> make
+printf "echo Successful installed in directory: ${dir_bin}.\n" >> make
+
+chmod 755 make
+
+echo -e "\nConfiguration successful. Ready to make."

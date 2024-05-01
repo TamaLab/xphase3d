@@ -1,0 +1,59 @@
+#!/bin/bash
+
+
+# Compile on login node
+
+
+set -e
+
+dir_bin="../bin/"
+mkdir ${dir_bin}
+
+# spack
+. /vol0004/apps/oss/spack/share/spack/setup-env.sh
+# fujitsu-fftw
+spack load fujitsu-fftw
+# hdf5
+spack load /f2rs4lm
+
+flags="-lfftw3_mpi -lfftw3 -lhdf5 -ldl -lm"
+
+echo -e "\n\n\n\n"
+echo Compiling align
+mpifccpx fileio.c align.c ${flags} -o ${dir_bin}/align
+
+echo -e "\n\n\n"
+echo Compiling bin_b
+mpifccpx fileio.c bin_b.c ${flags} -o ${dir_bin}/bin_b
+
+echo -e "\n\n\n"
+echo Compiling bin_f
+mpifccpx fileio.c bin_f.c ${flags} -o ${dir_bin}/bin_f
+
+echo -e "\n\n\n"
+echo Compiling fsc
+mpifccpx fileio.c fsc.c ${flags} -o ${dir_bin}/fsc
+
+echo -e "\n\n\n"
+echo Compiling make_m
+mpifccpx fileio.c make_m.c ${flags} -o ${dir_bin}/make_m
+
+echo -e "\n\n\n"
+echo Compiling make_r0
+mpifccpx fileio.c make_r0.c ${flags} -o ${dir_bin}/make_r0
+
+echo -e "\n\n\n"
+echo Compiling make_s
+mpifccpx fileio.c optimize.c make_s.c ${flags} -o ${dir_bin}/make_s
+
+echo -e "\n\n\n"
+echo Compiling merge
+mpifccpx fileio.c merge.c ${flags} -o ${dir_bin}/merge
+
+echo -e "\n\n\n"
+echo Compiling prtf
+mpifccpx fileio.c prtf.c ${flags} -o ${dir_bin}/prtf
+
+echo -e "\n\n\n"
+echo Compiling run
+mpifccpx fileio.c optimize.c run.c ${flags} -o ${dir_bin}/run
