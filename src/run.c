@@ -10,7 +10,7 @@
 
 /*
 The main program for phase retrieval using xphase3d
-Version 2024.04
+Version 2024.07
 
 Contributors:
     - Wenyang Zhao
@@ -48,7 +48,8 @@ int run_iteration(fftw_plan plan_fft, fftw_plan plan_ifft,
     char *method, int num_iteration, double beta, double lower_bound, double upper_bound,
     ptrdiff_t indexN, ptrdiff_t local_indexN,
     fftw_complex *local_RC, fftw_complex *local_F,
-    double *local_M, uint8_t *local_S, uint8_t *local_H);
+    double *local_M, uint8_t *local_S, uint8_t *local_H,
+    double *t_iter_for, double *t_iter_fft);
 int run_loop(int num_loop, double sigma0, double sigmar, double th,
     char *method, int num_iteration, double beta, double lower_bound, double upper_bound,
     ptrdiff_t x_start, ptrdiff_t x_end, ptrdiff_t xN, ptrdiff_t yN, ptrdiff_t zN,
@@ -58,7 +59,8 @@ int run_loop(int num_loop, double sigma0, double sigmar, double th,
     fftw_complex *local_RC, fftw_complex *local_F,
     double *local_M, uint8_t *local_S, uint8_t *local_H,
     fftw_complex *local_kernel, fftw_complex *local_R_abs, fftw_complex *local_R_conv,
-    fftw_complex *local_F_kernel, fftw_complex *local_F_R_abs, fftw_complex *local_F_R_conv);
+    fftw_complex *local_F_kernel, fftw_complex *local_F_R_abs, fftw_complex *local_F_R_conv,
+    double *t_iter_for, double *t_iter_fft, double *t_wrap_for, double *t_wrap_fft);
 //
 
 
@@ -87,9 +89,20 @@ int main(int argc, char **argv)
 
     // To measure the running time
     char *time_str = (char*)malloc(100 * sizeof(char));
-    clock_t time_0, time_1, time_2;
-    double time_ini, time_opt;
-    time_0 = clock();
+    clock_t c_0, c_1, c_2;
+    double t_ini, t_opt;
+
+    // t_iter_for: runtime for FOR loops in iterations
+    // t_iter_fft: runtime for FFT in iterations
+    // t_wrap_for: runtime for FOR loops in shrink wrap
+    // t_wrap_fft: runtime for FFT in shrink wrap
+    double t_iter_for, t_iter_fft, t_wrap_for, t_wrap_fft;
+    t_iter_for = 0.0;
+    t_iter_fft = 0.0;
+    t_wrap_for = 0.0;
+    t_wrap_fft = 0.0;
+
+    c_0 = clock();
 
     // Create a log file
     FILE *file_log;
@@ -355,7 +368,7 @@ int main(int argc, char **argv)
 
     // Start loops
     initialize_RC(local_indexN, local_RC, local_R0);
-    time_1 = clock();
+    c_1 = clock();
     run_loop(num_loop, sigma0, sigmar, th,
         method, num_iteration, beta, lower_bound, upper_bound,
         x_start, x_end, xN, yN, zN,
@@ -365,9 +378,10 @@ int main(int argc, char **argv)
         local_RC, local_F,
         local_M, local_S, local_H,
         local_kernel, local_R_abs, local_R_conv,
-        local_F_kernel, local_F_R_abs, local_F_R_conv);
+        local_F_kernel, local_F_R_abs, local_F_R_conv,
+        &t_iter_for, &t_iter_fft, &t_wrap_for, &t_wrap_fft);
     //
-    time_2 = clock();
+    c_2 = clock();
 
     if (RANK == 0)
     {
@@ -398,23 +412,34 @@ int main(int argc, char **argv)
     }
 
     // Print running time
-    time_ini  = ((double)(time_1 - time_0)) / CLOCKS_PER_SEC;
-    time_opt = ((double)(time_2 - time_1)) / CLOCKS_PER_SEC;
+    t_ini  = ((double)(c_1 - c_0)) / CLOCKS_PER_SEC;
+    t_opt = ((double)(c_2 - c_1)) / CLOCKS_PER_SEC;
+    t_iter_for = t_iter_for / CLOCKS_PER_SEC;
+    t_iter_fft = t_iter_fft / CLOCKS_PER_SEC;
+    t_wrap_for = t_wrap_for / CLOCKS_PER_SEC;
+    t_wrap_fft = t_wrap_fft / CLOCKS_PER_SEC;
+
     if (RANK == 0)
     {
         printf ("\n");
         printf ("######################################################################\n");
         printf ("Summary\n");
         printf ("\n");
-        printf ("    xN:                          %ld\n", xN);
-        printf ("    yN:                          %ld\n", yN);
-        printf ("    zN:                          %ld\n", zN);
-        printf ("    method:                      %s\n", method);
-        printf ("    num_loop:                    %d\n", num_loop);
-        printf ("    num_iteration:               %d\n", num_iteration);
-        printf ("    Number of processes:         %d\n", SIZE);
-        printf ("    Time for initialization (s): %f\n", time_ini);
-        printf ("    Time for optimization (s):   %f\n", time_opt);
+        printf ("    xN:                             %ld\n", xN);
+        printf ("    yN:                             %ld\n", yN);
+        printf ("    zN:                             %ld\n", zN);
+        printf ("    method:                         %s\n", method);
+        printf ("    num_loop:                       %d\n", num_loop);
+        printf ("    num_iteration:                  %d\n", num_iteration);
+        printf ("    Number of processes:            %d\n", SIZE);
+        printf ("    Runtime for initialization (s): %f\n", t_ini);
+        printf ("    Runtime for optimization (s):   %f\n", t_opt);
+        printf ("\n");
+        printf ("    ------------------------------------------------------------------\n");
+        printf ("    Runtime for Iter-FOR (s):       %f\n", t_iter_for);
+        printf ("    Runtime for Iter-FFT (s):       %f\n", t_iter_fft);
+        printf ("    Runtime for SW-FOR (s):         %f\n", t_wrap_for);
+        printf ("    Runtime for SW-FFT (s):         %f\n", t_wrap_fft);
         printf ("######################################################################\n");
         printf ("\n");
         fclose(file_log);
@@ -511,13 +536,15 @@ int run_iteration(fftw_plan plan_fft, fftw_plan plan_ifft,
     char *method, int num_iteration, double beta, double lower_bound, double upper_bound,
     ptrdiff_t indexN, ptrdiff_t local_indexN,
     fftw_complex *local_RC, fftw_complex *local_F,
-    double *local_M, uint8_t *local_S, uint8_t *local_H)
+    double *local_M, uint8_t *local_S, uint8_t *local_H,
+    double *t_iter_for, double *t_iter_fft)
 {
     int (*optFUN[])(fftw_plan, fftw_plan,
         double, double, double,
         ptrdiff_t, ptrdiff_t,
         fftw_complex*, fftw_complex*,
-        double*, uint8_t*, uint8_t*) = {optHIO, optER, optASR, optHPR, optRAAR, optDM};
+        double*, uint8_t*, uint8_t*,
+        double*, double*) = {optHIO, optER, optASR, optHPR, optRAAR, optDM};
 
     int choice;
     if (strcmp(method, "HIO") == 0)       choice = 0;
@@ -541,7 +568,8 @@ int run_iteration(fftw_plan plan_fft, fftw_plan plan_ifft,
             beta, lower_bound, upper_bound,
             indexN, local_indexN,
             local_RC, local_F,
-            local_M, local_S, local_H);
+            local_M, local_S, local_H,
+            t_iter_for, t_iter_fft);
     }
     free(time_str);
 
@@ -559,7 +587,8 @@ int run_loop(int num_loop, double sigma0, double sigmar, double th,
     fftw_complex *local_RC, fftw_complex *local_F,
     double *local_M, uint8_t *local_S, uint8_t *local_H,
     fftw_complex *local_kernel, fftw_complex *local_R_abs, fftw_complex *local_R_conv,
-    fftw_complex *local_F_kernel, fftw_complex *local_F_R_abs, fftw_complex *local_F_R_conv)
+    fftw_complex *local_F_kernel, fftw_complex *local_F_R_abs, fftw_complex *local_F_R_conv,
+    double *t_iter_for, double *t_iter_fft, double *t_wrap_for, double *t_wrap_fft)
 {
     double sigma;
     char* time_str = (char*)malloc(100 * sizeof(char));
@@ -577,18 +606,20 @@ int run_loop(int num_loop, double sigma0, double sigmar, double th,
             method, num_iteration, beta, lower_bound, upper_bound,
             indexN, local_indexN,
             local_RC, local_F,
-            local_M, local_S, local_H);
+            local_M, local_S, local_H,
+            t_iter_for, t_iter_fft);
         // Current RC is real, give imaginary part by projM()
         projM(plan_fft, plan_ifft,
             indexN, local_indexN,
-            local_RC, local_F, local_M, local_H);
+            local_RC, local_F, local_M, local_H,
+            t_wrap_for, t_wrap_fft);
         sigma = sigma0 * pow(1.0 - sigmar, loop);
-        get_kernel(x_start, x_end, xN, yN, zN, sigma, local_kernel);
+        get_kernel(x_start, x_end, xN, yN, zN, sigma, local_kernel, t_wrap_for);
         get_R_conv(indexN, local_indexN, local_RC,
             plan_fft_kernel, plan_fft_R_abs, plan_ifft_R_conv,
             local_R_abs, local_R_conv,
-            local_F_kernel, local_F_R_abs, local_F_R_conv);
-        update_S(th, local_indexN, local_S, local_R_conv, MPI_COMM_WORLD);
+            local_F_kernel, local_F_R_abs, local_F_R_conv, t_wrap_for, t_wrap_fft);
+        update_S(th, local_indexN, local_S, local_R_conv, MPI_COMM_WORLD, t_wrap_for);
         // Cast away imaginary part of RC
         for (ptrdiff_t i = 0; i < local_indexN; i++)
         {

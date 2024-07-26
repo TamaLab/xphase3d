@@ -129,6 +129,8 @@ int main(int argc, char **argv)
     local_alloc = fftw_mpi_local_size_3d(xN, yN, zN, MPI_COMM_WORLD, &local_xN, &x_start);
     x_end = x_start + local_xN;
     local_indexN = local_xN * yN * zN;
+    // t_wrap_for: runtime for FOR loops in shrink wrap
+    double t_wrap_for;
 
     if (rank == 0)
     {
@@ -191,7 +193,7 @@ int main(int argc, char **argv)
     local_F_kernel = fftw_alloc_complex(local_alloc);
     fftw_plan plan_fft_kernel;
     plan_fft_kernel = fftw_mpi_plan_dft_3d(xN, yN, zN, local_kernel, local_F_kernel, MPI_COMM_WORLD, FFTW_FORWARD, FFTW_ESTIMATE);
-    get_kernel(x_start, x_end, xN, yN, zN, sigma, local_kernel);
+    get_kernel(x_start, x_end, xN, yN, zN, sigma, local_kernel, &t_wrap_for);
     fftw_execute(plan_fft_kernel);
 
     // Convolution of the autocorrelation function and its Fourier transform
@@ -217,7 +219,7 @@ int main(int argc, char **argv)
 
     // Support S
     uint8_t* local_S = (uint8_t*)malloc(sizeof(uint8_t) * local_indexN);
-    update_S(th, local_indexN, local_S, local_acf_conv, MPI_COMM_WORLD);
+    update_S(th, local_indexN, local_S, local_acf_conv, MPI_COMM_WORLD, &t_wrap_for);
 
     if (rank == 0)
     {

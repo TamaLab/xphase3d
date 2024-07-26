@@ -9,7 +9,7 @@
 #PJM -j
 
 # Activate the pre-set Python environment
-source /vol0004/ra000015/data/anaconda_enable
+source /vol0004/ra000015/data/mambaforge_enable
 conda activate xphase
 
 mpiexec -n 2 python -m xphase3dpy.mpi_run fugaku_demo_py_bulk_${PJM_BULKNUM}_#.config

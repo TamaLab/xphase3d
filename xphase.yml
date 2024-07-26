@@ -1,11 +1,11 @@
 name: xphase
 channels:
-  - defaults
+  - conda-forge
 dependencies:
   - python=3.8
   - numpy>=1.23
   - scipy>=1.9
   - mpi4py=3.1.4
   - h5py>=3.0
-  - conda-forge::mrcfile
+  - mrcfile
 
