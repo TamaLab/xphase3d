@@ -285,7 +285,7 @@ def prtf(keyword_R, start, end, keyword_prtf, xN, yN, zN):
             for k in range(0, kN):
                 f.write("{0:<10}\t{1:.6f}\n".format(k, PRTF[k]))
     except Exception as e:
-        print ("Error in reading {0}".format(keyword_prtf))
+        print ("Error in writing {0}".format(keyword_prtf))
         print ("    {0}".format(e))
         return 1
     return 0
@@ -351,7 +351,7 @@ def fsc(keyword_R1, keyword_R2, keyword_fsc, xN, yN, zN):
             for k in range(0, kN):
                 f.write("{0:<10}\t{1:.6f}\n".format(k, FSC[k]))
     except Exception as e:
-        print ("Error in reading {0}".format(keyword_fsc))
+        print ("Error in writing {0}".format(keyword_fsc))
         print ("    {0}".format(e))
         return 1
     return 0

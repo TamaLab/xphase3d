@@ -4,6 +4,7 @@
 # Functions for projections and iterative optimizations in xphase3dpy
 
 
+import sys
 import datetime
 import numpy as np
 from scipy.fftpack import fftn, ifftn
@@ -168,6 +169,7 @@ def run_loop(R, M, S, H, num_loop, num_iteration, lower_bound, upper_bound,
         sigma = sigma0 * (1 - sigmar)**loop
         S = update_S(Rpc, th, sigma)
         R = np.real(Rpc)
+        sys.stdout.flush()
     return R
 
 

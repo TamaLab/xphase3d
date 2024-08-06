@@ -169,7 +169,7 @@ def main(filename_config, mpi=False):
             return 1
     else:
         S = create_S(xN, yN, zN)
-    # Read of create H
+    # Read or create H
     print ("{0:50} {1}".format("Start reading/creating H", get_time()))
     if need_H == 1:
         try:
@@ -188,6 +188,7 @@ def main(filename_config, mpi=False):
     # Start loops
     print ("")
     print ("{0:50} {1}".format("Optimization starts", get_time()))
+    sys.stdout.flush()
     R = np.copy(R0)
     time_1 = time.time()
     Rp = optimize.run_loop(R, M, S, H, num_loop, num_iteration, lower_bound,
